@@ -1,0 +1,13 @@
+<p>
+  <b>Name:</b>
+  <%=h @document.name %>
+</p>
+
+<p>
+  <b>Body:</b>
+  <%=h @document.body %>
+</p>
+
+
+<%= link_to 'Edit', edit_document_path(@document) %> |
+<%= link_to 'Back', documents_path %>
