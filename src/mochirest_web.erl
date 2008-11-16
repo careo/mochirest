@@ -52,13 +52,15 @@ all(Req, DocRoot) ->
     Req:respond({200, [], rfc4627:encode(All) }).
 
 create(Req, DocRoot) ->
-    Doc = from_json(uuid:gen(), Req:recv_body()),
-    save(Doc, DocRoot),
-    Req:respond({300,
-                 [{status, created},
-                  {location, "/documents/" ++ file_from_id(Doc#doc.id)}],
-                 [to_json(Doc)]}).
-
+    Body = Req:recv_body(),
+    io:format("Create: ~p~n", [Body]),
+    {ok, Doc,_} = rfc4627:decode(Body),
+    {ok, {obj, Result}} = post_doc(Doc),
+    
+    %Req:respond({300,
+    %             [{status, created},{}
+    Req:respond({201, [{status,created}], "rad" }).
+                 
 doc_id(Req) ->
     "/documents/" ++ Postfix = Req:get(path),
     "nosj." ++ DocId = lists:reverse(Postfix),
@@ -76,11 +78,12 @@ update(Req, DocRoot) ->
     Req:respond({200, [], [to_json(Doc)]}).
 
 delete(Req, DocRoot) ->
-    file:delete(filename:join(DocRoot, file_from_req(Req))),
+    DocId = doc_id(Req),
+    delete_doc(DocId),
     Req:respond({200, [], []}).
 
 from_json(ID, JSON) ->
-    {struct, Props} = mochijson:decode(JSON),
+    {obj, Props} = rfc4627:decode(JSON),
     #doc{id=ID,
          name=proplists:get_value("name", Props),
          body=proplists:get_value("body", Props)}.
@@ -163,3 +166,20 @@ clean_view_results(Results) ->
     % Value.
     io:format("Pattern Matched Values: ~p~n",[Values]),
     Values.
+    
+post_doc(Doc) ->
+    io:format("POST to Couch: ~p~n", [Doc]),
+    Result = ecouch:doc_create("documents",Doc),
+    io:format(" ... result: ~p~n", [Result]),
+    Result.
+
+delete_doc(DocId) ->
+    io:format("DELETE to Couch: ~p~n", [DocId]),
+    {ok, {obj, Doc}} = ecouch:doc_get("documents",DocId),
+    io:format("... Doc from Couch: ~p~n", [Doc]),
+    [Rev | _ ] = [X || {"_rev",X} <- Doc],
+    io:format("... _rev: ~p~n", [Rev]),
+    Result = ecouch:doc_delete("documents",DocId,Rev),
+    io:format(" ... result: ~p~n", [Result]),
+    Result.
+    
