@@ -55,11 +55,14 @@ create(Req, DocRoot) ->
     Body = Req:recv_body(),
     io:format("Create: ~p~n", [Body]),
     {ok, Doc,_} = rfc4627:decode(Body),
+    io:format("... Doc: ~p~n", [Doc]),
     {ok, {obj, Result}} = post_doc(Doc),
-    
-    %Req:respond({300,
-    %             [{status, created},{}
-    Req:respond({201, [{status,created}], "rad" }).
+    [DocId | _] = [ X || {"id", X} <- Result],
+    NewDoc = get_doc(DocId),
+    Req:respond({300,
+                 [{status, created},
+                  {location, "/documents/" ++ DocId}],
+                 [rfc4627:encode(NewDoc)]}).
                  
 doc_id(Req) ->
     "/documents/" ++ Postfix = Req:get(path),
