@@ -43,14 +43,13 @@ loop(Req, DocRoot) ->
 %% Internal API
 
 all(Req, DocRoot) ->
-    {ok, FList} = file:list_dir(DocRoot),
-    All = lists:map(fun(FN) ->
-                            ID=id_from_file(FN),
-                            Doc=load(ID, DocRoot),
-                            {struct, tuples(Doc)}
-                    end, FList),
-    mochijson:encode({array, All}),
-    Req:respond({200, [], [all_to_json(DocRoot)]}).
+    % All = lists:map(fun(FN) ->
+    %                         ID=id_from_file(FN),
+    %                         Doc=load(ID, DocRoot),
+    %                         {struct, tuples(Doc)}
+    %                 end, FList),
+    All = get_all(),
+    Req:respond({200, [], rfc4627:encode(All) }).
 
 create(Req, DocRoot) ->
     Doc = from_json(uuid:gen(), Req:recv_body()),
@@ -116,3 +115,14 @@ file_from_id(ID) ->
 
 get_option(Option, Options) ->
     {proplists:get_value(Option, Options), proplists:delete(Option, Options)}.
+
+get_all() ->
+    % All = ecouch:doc_get_all("documents"),
+    All = ecouch:doc_get("documents","_view/documents/all-map"),
+    io:format("Raw Results: ~p~n",[All]),
+    clean_view_results(All).
+    
+clean_view_results(Results) ->
+    {_,{_,[_,_,{_,Rows}]}} = Results,
+    io:format("Pattern Matched Rows: ~p~n",[Rows]),
+    Rows.

@@ -20,6 +20,8 @@ ensure_started(App) ->
 start() ->
     mochirest_deps:ensure(),
     ensure_started(crypto),
+    inets:start(),
+    ensure_started(ecouch),
     application:start(mochirest).
 
 %% @spec stop() -> ok
@@ -27,4 +29,6 @@ start() ->
 stop() ->
     Res = application:stop(mochirest),
     application:stop(crypto),
+    application:stop(ecouch),
+    inets:stop(),
     Res.
