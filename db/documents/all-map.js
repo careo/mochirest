@@ -1,3 +1,3 @@
 function(doc) {
-  emit(null,doc);
+    emit(null,doc);
 }
