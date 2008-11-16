@@ -59,8 +59,16 @@ create(Req, DocRoot) ->
                   {location, "/documents/" ++ file_from_id(Doc#doc.id)}],
                  [to_json(Doc)]}).
 
+doc_id(Req) ->
+    "/documents/" ++ Postfix = Req:get(path),
+    "nosj." ++ DocId = lists:reverse(Postfix),
+    lists:reverse(DocId).
+
 read(Req, DocRoot) ->
-    Req:serve_file(file_from_req(Req), DocRoot).
+    DocId = doc_id(Req),
+    io:format("DocId: ~p~n", [DocId]),
+    Doc = get_doc(DocId),
+    Req:respond({200, [], rfc4627:encode(Doc) }).
 
 update(Req, DocRoot) ->
     Doc = from_json(id_from_file(file_from_req(Req)), Req:recv_body()),
@@ -121,8 +129,37 @@ get_all() ->
     All = ecouch:doc_get("documents","_view/documents/all-map"),
     io:format("Raw Results: ~p~n",[All]),
     clean_view_results(All).
-    
-clean_view_results(Results) ->
+
+get_doc(DocId) ->
+    {ok, Doc} = ecouch:doc_get("documents",DocId),
+    io:format("Raw Doc: ~p~n",[Doc]),
+    Doc.    
+
+rows(Results) ->    
     {_,{_,[_,_,{_,Rows}]}} = Results,
     io:format("Pattern Matched Rows: ~p~n",[Rows]),
     Rows.
+
+result(Row) ->
+    {_,Result} = Row,
+    io:format("Pattern Matched Result: ~p~n",[Result]),
+    Result.
+
+value(Result) ->
+    [Value | _] = [X || {"value", X} <- Result],
+    io:format("Pattern Matched Value: ~p~n",[Value]),
+    Value.
+
+value_from_row(Row) -> 
+    value(result(Row)).
+    
+clean_view_results(Results) ->
+    Rows = rows(Results),
+    % Values = [ value(result(X)) || X < Result ]
+    % Values.
+    Values = lists:map(fun(Row) -> value_from_row(Row) end, Rows),
+    % [Row | T] = Rows,
+    % Value = value_from_row(Row),
+    % Value.
+    io:format("Pattern Matched Values: ~p~n",[Values]),
+    Values.
