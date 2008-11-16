@@ -76,9 +76,13 @@ read(Req, DocRoot) ->
     Req:respond({200, [], rfc4627:encode(Doc) }).
 
 update(Req, DocRoot) ->
-    Doc = from_json(id_from_file(file_from_req(Req)), Req:recv_body()),
-    save(Doc, DocRoot),
-    Req:respond({200, [], [to_json(Doc)]}).
+    Body = Req:recv_body(),
+    io:format("Update: ~p~n", [Body]),
+    {ok, Doc,_} = rfc4627:decode(Body),
+    io:format("... Doc: ~p~n", [Doc]),
+    
+    put_doc(Doc),
+    Req:respond({200, [], rfc4627:encode(Doc)}).
 
 delete(Req, DocRoot) ->
     DocId = doc_id(Req),
@@ -183,6 +187,15 @@ delete_doc(DocId) ->
     [Rev | _ ] = [X || {"_rev",X} <- Doc],
     io:format("... _rev: ~p~n", [Rev]),
     Result = ecouch:doc_delete("documents",DocId,Rev),
+    io:format(" ... result: ~p~n", [Result]),
+    Result.
+    
+put_doc(Doc) ->
+    io:format("PUT ~p~n", [Doc]),
+    {obj,DocYargh} = Doc,
+    [DocId | _] = [ X || {"_id", X} <- DocYargh],
+    io:format("PUT to Couch -- Doc: ~p~n -- DocId: ~p~n", [Doc,DocId]),
+    Result = ecouch:doc_update("documents", DocId, Doc),
     io:format(" ... result: ~p~n", [Result]),
     Result.
     
